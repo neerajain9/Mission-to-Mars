@@ -1,5 +1,6 @@
 # #### import Splinter and BeautifulSoup
 # Import Splinter and BeautifulSoup
+from pymongo import database
 from splinter import Browser
 from bs4 import BeautifulSoup as soup
 from webdriver_manager.chrome import ChromeDriverManager
@@ -20,7 +21,8 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemisphere_image_urls": image_urls(browser)
     }
 
     # Stop webdriver and return data
@@ -110,10 +112,33 @@ def mars_facts():
     df.set_index('description', inplace=True)
 
     # Convert dataframe into HTML format, add bootstrap
-    return df.to_html(classes="table table-striped")
+    return df.to_html(border="2", bold_rows=True, classes="table table-striped table-condensed table-hover")
 
 #############################
+def image_urls(browser):
+    url = 'https://marshemispheres.com/'
+    browser.visit(url)
+    hemisphere_image_urls = []
+
+    # Parse the resulting html with soup
+    img_soup = soup(browser.html, 'html.parser')
+    titles = [i.text for i in img_soup.find_all('h3')[:-1]]
+    urls = []
+    for i in titles:
+        browser.find_by_text(i).click()
+        url_soup = soup(browser.html, 'html.parser')
+        url_complete = url + url_soup.find('a',text='Sample').get('href')
+        urls.append(url_complete)
+        browser.back()
+
+    # 4. Print the list that holds the dictionary of each image url and title.
+    hemisphere_image_urls = [{'img_url':j,'title':i} for i,j in zip(titles, urls)]
+    return hemisphere_image_urls
+
+#############################
+
 # Instruct FLASK to run
 if __name__ == "__main__":
     # If running as script, print scraped data
     print(scrape_all())
+        # return mars_data
